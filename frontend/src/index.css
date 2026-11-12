@@ -1,0 +1,145 @@
+/* LOGIN PAGE */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc, #e0e7ff);
+  font-family: Inter, Arial, sans-serif;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(30, 41, 90, 0.12);
+}
+
+.login-logo {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 22px;
+  border-radius: 15px;
+  background: #5145e8;
+  color: white;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.login-eyebrow {
+  color: #5145e8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.login-card h1 {
+  margin: 10px 0;
+  color: #172554;
+  font-size: 30px;
+}
+
+.login-description {
+  margin-bottom: 28px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.login-field {
+  margin-bottom: 18px;
+}
+
+.login-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-field input {
+  width: 100%;
+  height: 47px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  border-color: #5145e8;
+  box-shadow: 0 0 0 3px rgba(81, 69, 232, 0.12);
+}
+
+.login-button {
+  width: 100%;
+  height: 47px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 9px;
+  background: #5145e8;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-button:hover {
+  background: #4035c7;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-error {
+  margin-bottom: 15px;
+  padding: 11px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.login-footer {
+  margin-top: 25px;
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* DASHBOARD TOPBAR */
+
+.dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 25px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  color: #172554;
+  font-weight: 700;
+}
+
+.dashboard-topbar button {
+  padding: 9px 17px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboard-topbar button:hover {
+  background: #b91c1c;
+}
