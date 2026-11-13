@@ -1,8 +1,17 @@
 
 import axios from "axios";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://student-dashboard-x5id.vercel.app"
+).replace(/\/+$/, "");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 20000,
 });
 
 api.interceptors.request.use((config) => {
