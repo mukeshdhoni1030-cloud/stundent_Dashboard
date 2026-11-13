@@ -10,12 +10,15 @@ from app.database import engine
 from app.limiter import limiter
 from app.routes import auth, student, teacher, principal
 
+
 app = FastAPI(
     title="Student Dashboard API",
     description="Student, Teacher and Principal Dashboard",
     version="1.0.0"
 )
 
+
+# Rate limiting configuration
 app.state.limiter = limiter
 app.add_exception_handler(
     RateLimitExceeded,
@@ -23,12 +26,15 @@ app.add_exception_handler(
 )
 app.add_middleware(SlowAPIMiddleware)
 
+
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5174",
         "http://localhost:4173",
         "https://student-dashboard.vercel.app",
+        "https://stundent-dashboard.vercel.app",
     ],
     allow_origin_regex=r"https://student-dashboard-[a-z0-9-]+-kris-lynx-team\.vercel\.app",
     allow_credentials=True,
@@ -36,17 +42,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Register API routes
 app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(teacher.router)
 app.include_router(principal.router)
 
 
+# Home endpoint
 @app.get("/")
 def home():
-    return {"message": "Student Dashboard API is running"}
+    return {
+        "message": "Student Dashboard API is running"
+    }
 
 
+# Database health check
 @app.get("/health")
 def health():
     try:
