@@ -1,3 +1,6 @@
+
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -27,6 +30,9 @@ from app.schemas import (
 )
 from app.security import get_password_hash
 from app.dependencies import require_principal
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -235,7 +241,6 @@ def create_teacher_attendance(
             status_code=500,
             detail="Unable to mark teacher attendance"
         )
-
 
 
 # ==========================================
@@ -490,6 +495,11 @@ def create_teacher(
             detail="Unable to create teacher"
         )
 
+
+# ==========================================
+# ASSIGN TEACHER TO CLASS AND SUBJECT
+# ==========================================
+
 @router.post("/assign-teacher", status_code=status.HTTP_201_CREATED)
 def assign_teacher(
     data: TeacherAssignmentCreate,
@@ -569,6 +579,7 @@ def assign_teacher(
             detail="Unable to assign teacher"
         )
 
+
 # ==========================================
 # UPDATE TEACHER DETAILS
 # ==========================================
@@ -619,6 +630,11 @@ def update_teacher(
             status_code=500,
             detail="Unable to update teacher"
         )
+
+
+# ==========================================
+# UPDATE STUDENT DETAILS
+# ==========================================
 
 @router.put("/students/{student_id}")
 def update_student(
@@ -696,12 +712,18 @@ def update_student(
             detail="Unable to update student"
         )
 
+
+# ==========================================
+# PERMANENTLY DELETE STUDENT
+# ==========================================
+
 @router.delete("/students/{student_id}")
 def delete_student(
     student_id: int,
     current_user: User = Depends(require_principal),
     db: Session = Depends(get_db)
 ):
+    # Find the student and keep the linked login account ID.
     student = db.query(Student).filter(
         Student.id == student_id
     ).first()
@@ -712,48 +734,76 @@ def delete_student(
             detail="Student not found"
         )
 
-    # Check related records before deletion
-    has_attendance = db.query(StudentAttendance).filter(
-        StudentAttendance.student_id == student_id
-    ).first()
-
-    has_marks = db.query(Mark).filter(
-        Mark.student_id == student_id
-    ).first()
-
-    has_fees = db.query(Fee).filter(
-        Fee.student_id == student_id
-    ).first()
-
-    if has_attendance or has_marks or has_fees:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete student because attendance, marks, or fee records exist"
-        )
+    user_id = student.user_id
 
     try:
-        user = db.query(User).filter(
-            User.id == student.user_id
-        ).first()
+        # Delete records that reference the student first.
+        attendance_deleted = db.query(StudentAttendance).filter(
+            StudentAttendance.student_id == student_id
+        ).delete(synchronize_session=False)
 
-        db.delete(student)
+        marks_deleted = db.query(Mark).filter(
+            Mark.student_id == student_id
+        ).delete(synchronize_session=False)
 
-        if user:
-            db.delete(user)
+        fees_deleted = db.query(Fee).filter(
+            Fee.student_id == student_id
+        ).delete(synchronize_session=False)
 
+        # Delete the student profile after its dependent records.
+        student_deleted = db.query(Student).filter(
+            Student.id == student_id
+        ).delete(synchronize_session=False)
+
+        if student_deleted != 1:
+            raise RuntimeError(
+                f"Expected to delete 1 student, deleted {student_deleted}"
+            )
+
+        # Delete only the linked account if it is a student account.
+        user_deleted = db.query(User).filter(
+            User.id == user_id,
+            User.role == "student"
+        ).delete(synchronize_session=False)
+
+        if user_deleted != 1:
+            raise RuntimeError(
+                f"Expected to delete 1 student user, deleted {user_deleted}"
+            )
+
+        # All deletes are committed together.
         db.commit()
 
         return {
-            "message": "Student deleted successfully",
-            "student_id": student_id
+            "message": "Student and related records permanently deleted",
+            "student_id": student_id,
+            "deleted_records": {
+                "attendance": attendance_deleted,
+                "marks": marks_deleted,
+                "fees": fees_deleted,
+                "student_profiles": student_deleted,
+                "login_accounts": user_deleted
+            }
         }
 
     except Exception:
         db.rollback()
+
+        # Full traceback is written to the Uvicorn terminal for diagnosis.
+        logger.exception(
+            "Permanent deletion failed for student_id=%s",
+            student_id
+        )
+
         raise HTTPException(
             status_code=500,
-            detail="Unable to delete student"
+            detail="Unable to delete student. The transaction was rolled back. Check the backend terminal."
         )
+
+
+# ==========================================
+# DELETE TEACHER
+# ==========================================
 
 @router.delete("/teachers/{teacher_id}")
 def delete_teacher(
@@ -818,6 +868,12 @@ def delete_teacher(
             status_code=500,
             detail="Unable to delete teacher"
         )
+
+
+# ==========================================
+# VIEW PENDING FEES
+# ==========================================
+
 @router.get("/pending-fees")
 def get_pending_fees(
     current_user: User = Depends(require_principal),
@@ -843,9 +899,9 @@ def get_pending_fees(
     ]
 
 
-# ==================================
+# ==========================================
 # ADD NEW STUDENT
-# ==================================
+# ==========================================
 
 @router.post("/students")
 def add_student(
