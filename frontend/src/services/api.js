@@ -3,7 +3,7 @@ import axios from "axios";
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ||
-  "https://student-dashboard-x5id.vercel.app"
+  "https://stundent-dashboard-x5id.vercel.app"
 ).replace(/\/+$/, "");
 
 const api = axios.create({
