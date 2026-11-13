@@ -811,6 +811,7 @@ def delete_teacher(
     current_user: User = Depends(require_principal),
     db: Session = Depends(get_db)
 ):
+    # Find the teacher and retain the linked login account ID.
     teacher = db.query(Teacher).filter(
         Teacher.id == teacher_id
     ).first()
@@ -821,52 +822,72 @@ def delete_teacher(
             detail="Teacher not found"
         )
 
-    # Check whether teacher has class or subject assignments
-    has_assignment = db.query(TeacherAssignment).filter(
-        TeacherAssignment.teacher_id == teacher_id
-    ).first()
-
-    # Check whether teacher has attendance records
-    has_attendance = db.query(TeacherAttendance).filter(
-        TeacherAttendance.teacher_id == teacher_id
-    ).first()
-
-    # Check whether teacher has salary records
-    has_salary = db.query(Salary).filter(
-        Salary.teacher_id == teacher_id
-    ).first()
-
-    if has_assignment or has_attendance or has_salary:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Cannot delete teacher because assignment, "
-                "attendance, or salary records exist"
-            )
-        )
+    user_id = teacher.user_id
 
     try:
-        user = db.query(User).filter(
-            User.id == teacher.user_id
-        ).first()
+        # Delete dependent records before deleting the teacher profile.
+        assignments_deleted = db.query(TeacherAssignment).filter(
+            TeacherAssignment.teacher_id == teacher_id
+        ).delete(synchronize_session=False)
 
-        db.delete(teacher)
+        attendance_deleted = db.query(TeacherAttendance).filter(
+            TeacherAttendance.teacher_id == teacher_id
+        ).delete(synchronize_session=False)
 
-        if user:
-            db.delete(user)
+        salaries_deleted = db.query(Salary).filter(
+            Salary.teacher_id == teacher_id
+        ).delete(synchronize_session=False)
 
+        # Delete the teacher profile.
+        teacher_deleted = db.query(Teacher).filter(
+            Teacher.id == teacher_id
+        ).delete(synchronize_session=False)
+
+        if teacher_deleted != 1:
+            raise RuntimeError(
+                f"Expected to delete 1 teacher profile, deleted {teacher_deleted}"
+            )
+
+        # Delete only the linked teacher login account.
+        user_deleted = db.query(User).filter(
+            User.id == user_id,
+            User.role == "teacher"
+        ).delete(synchronize_session=False)
+
+        if user_deleted != 1:
+            raise RuntimeError(
+                f"Expected to delete 1 teacher login account, deleted {user_deleted}"
+            )
+
+        # Commit all deletions together.
         db.commit()
 
         return {
-            "message": "Teacher deleted successfully",
-            "teacher_id": teacher_id
+            "message": "Teacher and related records permanently deleted",
+            "teacher_id": teacher_id,
+            "deleted_records": {
+                "assignments": assignments_deleted,
+                "attendance": attendance_deleted,
+                "salaries": salaries_deleted,
+                "teacher_profiles": teacher_deleted,
+                "login_accounts": user_deleted
+            }
         }
 
     except Exception:
         db.rollback()
+
+        logger.exception(
+            "Permanent teacher deletion failed for teacher_id=%s",
+            teacher_id
+        )
+
         raise HTTPException(
             status_code=500,
-            detail="Unable to delete teacher"
+            detail=(
+                "Unable to delete teacher. The transaction was rolled back. "
+                "Check the backend terminal."
+            )
         )
 
 

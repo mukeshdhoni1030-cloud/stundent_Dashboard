@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 
 function PrincipalDashboard() {
@@ -99,6 +99,13 @@ function PrincipalDashboard() {
   const [salarySaving, setSalarySaving] = useState(false);
   const [salaryMessage, setSalaryMessage] = useState("");
   const [salaryError, setSalaryError] = useState("");
+
+  // Sections below the initial dashboard are loaded only when they approach
+  // the viewport. This avoids sending every API request immediately at login.
+  const studentAttendanceSectionRef = useRef(null);
+  const teacherAttendanceSectionRef = useRef(null);
+  const feesSectionRef = useRef(null);
+  const salariesSectionRef = useRef(null);
 
   // =====================================
   // FETCH DASHBOARD
@@ -242,13 +249,63 @@ function PrincipalDashboard() {
   // =====================================
 
   useEffect(() => {
+    // Load only the data needed for the first visible dashboard sections.
     fetchDashboard();
     fetchStudents();
     fetchTeachers();
-    fetchStudentAttendance();
-    fetchTeacherAttendance();
-    fetchFees();
-    fetchSalaries();
+  }, []);
+
+  useEffect(() => {
+    const lazySections = [
+      {
+        element: studentAttendanceSectionRef.current,
+        load: fetchStudentAttendance,
+      },
+      {
+        element: teacherAttendanceSectionRef.current,
+        load: fetchTeacherAttendance,
+      },
+      {
+        element: feesSectionRef.current,
+        load: fetchFees,
+      },
+      {
+        element: salariesSectionRef.current,
+        load: fetchSalaries,
+      },
+    ];
+
+    if (typeof IntersectionObserver === "undefined") {
+      lazySections.forEach((section) => section.load());
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          const section = lazySections.find(
+            (item) => item.element === entry.target
+          );
+
+          if (section) {
+            observer.unobserve(entry.target);
+            section.load();
+          }
+        });
+      },
+      {
+        // Start loading shortly before the user reaches each section.
+        rootMargin: "300px 0px",
+      }
+    );
+
+    lazySections.forEach((section) => {
+      if (section.element) observer.observe(section.element);
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   // =====================================
@@ -1044,7 +1101,7 @@ function PrincipalDashboard() {
           STUDENT ATTENDANCE
       ===================================== */}
 
-      <section className="principal-section">
+      <section className="principal-section" ref={studentAttendanceSectionRef}>
         <h2>Student Attendance</h2>
         <p>Monitor student attendance records.</p>
 
@@ -1115,7 +1172,7 @@ function PrincipalDashboard() {
           TEACHER ATTENDANCE
       ===================================== */}
 
-      <section className="principal-section">
+      <section className="principal-section" ref={teacherAttendanceSectionRef}>
         <h2>Teacher Attendance</h2>
         <p>Monitor teacher attendance records.</p>
 
@@ -1256,7 +1313,7 @@ function PrincipalDashboard() {
           STUDENT FEES
       ===================================== */}
 
-      <section className="principal-section">
+      <section className="principal-section" ref={feesSectionRef}>
         <h2>Student Fees</h2>
         <p>View student fee payments and pending balances.</p>
 
@@ -1320,7 +1377,7 @@ function PrincipalDashboard() {
           EMPLOYEE SALARIES
       ===================================== */}
 
-      <section className="principal-section">
+      <section className="principal-section" ref={salariesSectionRef}>
         <h2>Employee Salaries</h2>
         <p>View teacher salary information.</p>
 
