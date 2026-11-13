@@ -36,7 +36,10 @@ app.add_middleware(
         "https://student-dashboard.vercel.app",
         "https://stundent-dashboard.vercel.app",
     ],
-    allow_origin_regex=r"https://student-dashboard-[a-z0-9-]+-kris-lynx-team\.vercel\.app",
+    allow_origin_regex=(
+        r"https://(?:student|stundent)-dashboard-"
+        r"[a-z0-9-]+-kris-lynx-team\.vercel\.app"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
